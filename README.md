@@ -11,6 +11,9 @@ chatgpt-imagegen "a watercolor cat sitting on a windowsill" -o cat.png
 
 No server. No proxy. No API key. One Python file, stdlib only.
 
+<img width="1494" height="870" alt="image" src="https://github.com/user-attachments/assets/b48b0563-58a3-41ff-a207-f01eafbf2ccb" />
+
+
 ---
 
 ## Why this exists
