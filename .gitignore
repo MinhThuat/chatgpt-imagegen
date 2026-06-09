@@ -17,3 +17,6 @@ assets/generated/
 !docs/**/*.png
 !docs/**/*.jpg
 !docs/**/*.webp
+
+# Personal drafts / promo material — not part of the published skill
+drafts/

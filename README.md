@@ -79,8 +79,10 @@ chatgpt-imagegen "<prompt>" [options]
 | `--size` | `auto` | `auto` or any `WIDTHxHEIGHT`. Verified working: `1024x1024`, `1024x1536`, `1536x1024`. Larger sizes are forwarded as-is. |
 | `--format` | `png` | `png` \| `jpeg` \| `webp` |
 | `--model` | `gpt-5.5` | Chat model that hosts the `image_generation` tool |
-| `--timeout` | `180` | **Total wall-clock budget** (seconds) for the whole request — not just an idle socket timeout. |
-| `--quiet` | off | Print **only** the saved path on stdout (perfect for agent pipelines) |
+| `--timeout` | `300` | **Total wall-clock budget** (seconds) for the whole request. Large/detailed images can take 2–3 min. |
+| `--stall-timeout` | `120` | Max seconds of silence (no data from backend) before declaring a **stall** — caught well before the total budget. Clamped to `--timeout`. |
+| `--quiet` | off | Print **only** the saved path on stdout (perfect for agent pipelines). Progress still streams to stderr — use `--no-progress` to silence it. |
+| `--no-progress` | off | Suppress the stderr progress timeline (errors still print). |
 
 Examples:
 
@@ -120,7 +122,7 @@ The bundled [`SKILL.md`](./SKILL.md) tells the agent when to invoke it, sizing r
 | Quality | ⚠️ chosen by the model | The script does not expose a `--quality` flag because the subscription path does not expose reliable quality control — the backend has been observed picking `low` or `medium` on its own and ignoring or downgrading any request for `high`. Use the official `/v1/images/generations` API with `OPENAI_API_KEY` if you need explicit quality control. |
 | `background: transparent` | ❌ not supported on subscription | needs API-key path with `gpt-image-1.5` |
 | Image edits (`/v1/images/edits`) | ❌ not exposed yet | open an issue if you need this |
-| Speed | typical 15–40 s per image | streamed end-to-end |
+| Speed | typically 15–60 s, occasionally 2–3 min for large/detailed images | streamed end-to-end; a per-phase timeline prints to stderr so you can see it working |
 
 ## Concurrency
 
@@ -201,9 +203,9 @@ chatgpt-imagegen
        body:    tools: [image_generation]
        │
        └── SSE stream
-           ├── response.image_generation_call.in_progress
-           ├── response.image_generation_call.generating
-           ├── response.image_generation_call.partial_image   (ignored)
+           ├── response.image_generation_call.in_progress    → "queued"
+           ├── response.image_generation_call.generating      → "generating"
+           ├── response.image_generation_call.partial_image   → "receiving image (partial N)"
            ├── response.output_item.done  ← item.result = base64 PNG
            └── response.completed
 ```

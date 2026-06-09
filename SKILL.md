@@ -54,9 +54,12 @@ Useful flags:
 | `--size 1024x1536` | Portrait covers, mobile splashes (verified) |
 | `--size 3840x2160` or similar | 4K landscape (forwarded as-is; backend may reject — fall back to a smaller verified size on failure) |
 | `--format webp` | Smaller files for web assets |
-| `--quiet` | Use this in agent contexts so stdout is *only* the saved path |
+| `--quiet` | Use in agent contexts so stdout is *only* the saved path. Progress still streams to stderr (use `--no-progress` to silence it). |
+| `--no-progress` | Fully silence the stderr progress timeline (errors still print). |
+| `--timeout SECONDS` | Total wall-clock budget (default 300). Large/detailed images can take 2–3 min — raise it if you see a `timed out` error. |
+| `--stall-timeout SECONDS` | Max silence (no data from backend) before declaring a stall (default 120, clamped to `--timeout`). Lower it to fail faster on a hung backend. |
 
-The script prints **just the saved path on stdout** when `--quiet` is set; progress goes to stderr. Capture it with `OUT=$(chatgpt-imagegen "..." --quiet)`.
+The script prints **just the saved path on stdout** in every mode; the readable progress timeline and any errors go to **stderr**, so `OUT=$(chatgpt-imagegen "..." --quiet)` captures only the path while you still see the timeline. Each timeline line is stamped with elapsed seconds (`[ 12.3s] generating`), so a slow run is legible and a stall is obvious.
 
 ## Save-path policy
 
@@ -79,7 +82,7 @@ The script prints **just the saved path on stdout** when `--quiet` is set; progr
 
 - **Image quality** is chosen by the backend; this skill has no `--quality` flag, and the subscription path does not honour explicit quality requests reliably. Don't promise a specific quality level to the user. If they need explicit `quality=high`, route them to the official `/v1/images/generations` API with their own `OPENAI_API_KEY`.
 - `background: transparent` is **not supported** on the subscription path.
-- A single image takes **15–40 s**.
+- A single image typically takes **15–60 s**, but large or detailed ones occasionally run **2–3 min**. The default `--timeout` is 300 s to cover this; a genuine hang is caught sooner by the `--stall-timeout` idle window (default 120 s).
 - **Parallel execution is supported** — the backend handles ≥4 concurrent requests with no serialization or 429s on a Plus account. If the user asks for several distinct assets, you may fire `chatgpt-imagegen` in parallel (e.g. shell `&` + `wait`). Do not loop blindly for "variants of the same prompt" — that just burns quota; iterate on the prompt instead.
 - Subscription quota is **shared** with the user's interactive ChatGPT use. Don't bulk-generate (>10 images / minute sustained) without permission — you'll hit per-day caps.
 
@@ -92,7 +95,8 @@ The script prints **just the saved path on stdout** when `--quiet` is set; progr
 | `HTTP 400 requires a newer version of Codex` | local codex CLI is outdated | Tell user to run `npm i -g @openai/codex@latest`; the script reads version from `~/.codex/version.json` which `codex` updates on launch |
 | `HTTP 401` / `HTTP 403` then refresh works | Token expired and refresh succeeded | No action needed — script auto-retried |
 | `refresh_token is no longer valid — run codex login again` | Refresh token revoked or rotated | Tell user to run `codex login` again |
-| `stream exceeded total timeout budget` | Backend stuck or slow | Retry; if persistent, pass `--timeout 300` |
+| `stalled: the image backend sent no data for ~Ns (last phase: …)` | No data for the whole `--stall-timeout` idle window — backend hung or overloaded | Retry; if it recurs, raise `--stall-timeout` (and `--timeout`). The message names the phase it stalled in. |
+| `timed out: no image within the Ns total budget (last phase: …)` | The whole `--timeout` budget elapsed — usually a genuinely large image | Raise `--timeout` (e.g. `--timeout 420`) and retry |
 | `no image returned. events seen: ...` | Model decided not to call the tool | Rephrase prompt to explicitly say "Use the image_generation tool to render…" |
 | `HTTP 429` | Subscription rate-limited | Wait a few minutes; do not retry in a loop |
 | `warning: --format=X but FILE.Y has .Y extension` | `-o` extension disagrees with `--format` | Fix the path or the format flag; the file IS written with the format you specified |

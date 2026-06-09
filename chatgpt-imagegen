@@ -34,6 +34,16 @@ from pathlib import Path
 from typing import Any, Iterator
 
 CODEX_BACKEND = "https://chatgpt.com/backend-api/codex/responses"
+# Default idle gap (seconds) tolerated between SSE chunks before the stream is
+# treated as stalled. The connect timeout urllib applies to urlopen() also
+# governs every subsequent read, so without loosening it a >connect-timeout
+# pause mid-stream (common while a detailed image renders) kills a live stream.
+# Overridable via --stall-timeout; always clamped to the total --timeout.
+# Measured: a real "generating" phase can stay silent ~66s before the first
+# partial image, so 120s leaves margin against false stalls on the slowest
+# images while still catching a genuine hang well inside the total budget.
+DEFAULT_STALL_TIMEOUT = 120.0
+DEFAULT_TOTAL_TIMEOUT = 300  # large images occasionally take 2-3 minutes
 OAUTH_TOKEN_URL = "https://auth.openai.com/oauth/token"
 OAUTH_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"  # Codex CLI's published client id
 FALLBACK_VERSION = "0.130.0"
@@ -175,6 +185,21 @@ def _detect_codex_version() -> str:
     return FALLBACK_VERSION
 
 
+def _loosen_read_timeout(resp: Any, timeout: float) -> None:
+    """Raise the per-read socket timeout on an already-connected response.
+
+    urlopen()'s ``timeout`` is a *connect* budget, but urllib leaves it on the
+    socket so it silently becomes the per-read timeout too. Left at the short
+    connect value, a single quiet gap in the SSE stream aborts a generation
+    that is still alive. Best-effort: if the socket isn't reachable through the
+    documented attribute chain, the connect timeout stays in place.
+    """
+    try:
+        resp.fp.raw._sock.settimeout(timeout)  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
+
 def _build_headers(token: str, account_id: str | None, version: str) -> dict[str, str]:
     sid = str(uuid.uuid4())
     headers = {
@@ -237,6 +262,7 @@ def _stream(
     headers: dict[str, str],
     body: JsonDict,
     deadline: float,
+    stall_timeout: float,
 ) -> Iterator[JsonDict]:
     """Yield parsed JSON event dicts from the SSE stream.
 
@@ -257,6 +283,13 @@ def _stream(
     # Initial connect timeout: shorter of remaining budget or 30s.
     initial = max(1.0, min(30.0, deadline - time.monotonic()))
     resp = urllib.request.urlopen(req, timeout=initial)
+    # Loosen the per-read timeout: a quiet gap between SSE chunks routinely
+    # exceeds the 30s connect timeout, and the overall wall-clock cap is already
+    # enforced by the `deadline` check below — so bound the per-read idle window
+    # by stall_timeout (and never beyond the remaining budget). A read that
+    # blocks longer than this raises TimeoutError, which the caller turns into a
+    # clean "stalled" message.
+    _loosen_read_timeout(resp, min(stall_timeout, max(1.0, deadline - time.monotonic())))
     try:
         data_buf: list[str] = []
         for raw in resp:
@@ -301,20 +334,43 @@ def _stream(
 
 
 def _post_for_image(
-    payload: JsonDict, headers: dict[str, str], deadline: float, verbose: bool
+    payload: JsonDict,
+    headers: dict[str, str],
+    deadline: float,
+    start: float,
+    stall_timeout: float,
+    progress: bool,
 ) -> tuple[bytes, JsonDict]:
-    """Returns (image_bytes, item_meta). Raises GatewayError on failure."""
+    """Returns (image_bytes, item_meta). Raises GatewayError on failure.
+
+    When `progress` is set, a human-readable timeline is streamed to stderr —
+    one line per phase, each stamped with elapsed seconds — so a slow run is
+    legible and a stall is obvious. stdout is never touched here.
+    """
     saw_event_types: dict[str, int] = {}
     image_b64: str | None = None
     item_meta: JsonDict = {}
     last_revised_prompt: str = ""
+    last_phase = "connecting"
+
+    def emit(msg: str) -> None:
+        if progress:
+            print(f"[{time.monotonic() - start:6.1f}s] {msg}", file=sys.stderr)
 
     try:
-        for evt in _stream(CODEX_BACKEND, headers, payload, deadline):
+        for evt in _stream(CODEX_BACKEND, headers, payload, deadline, stall_timeout):
             t = evt.get("type", "?")
             saw_event_types[t] = saw_event_types.get(t, 0) + 1
-            if verbose and saw_event_types[t] == 1 and t.startswith("response.image_generation_call"):
-                print(f"   .. {t}", file=sys.stderr)
+            first = saw_event_types[t] == 1
+            if t == "response.image_generation_call.in_progress" and first:
+                last_phase = "queued"
+                emit("queued")
+            elif t == "response.image_generation_call.generating" and first:
+                last_phase = "generating"
+                emit("generating")
+            elif t == "response.image_generation_call.partial_image":
+                last_phase = "receiving image"
+                emit(f"receiving image (partial {saw_event_types[t]})")
             if t == "response.output_item.done":
                 item = evt.get("item")
                 if isinstance(item, dict) and item.get("type") == "image_generation_call":
@@ -326,13 +382,32 @@ def _post_for_image(
     except urllib.error.HTTPError as e:
         body_text = e.read().decode("utf-8", errors="ignore")
         raise GatewayError(f"HTTP {e.code}: {body_text[:600]}", status=e.code) from None
+    except (TimeoutError, ConnectionError):
+        # Socket read timed out or the connection dropped mid-stream. Surface a
+        # clean, actionable message — naming the phase we stalled in and how long
+        # we waited — instead of a raw Python traceback.
+        elapsed = time.monotonic() - start
+        if time.monotonic() >= deadline:
+            total = int(round(deadline - start))
+            raise GatewayError(
+                f"timed out: no image within the {total}s total budget "
+                f"(last phase: {last_phase}, {elapsed:.0f}s elapsed). "
+                f"Raise --timeout for very large images."
+            ) from None
+        raise GatewayError(
+            f"stalled: the image backend sent no data for ~{int(stall_timeout)}s "
+            f"(last phase: {last_phase}, {elapsed:.0f}s elapsed). It may be "
+            f"overloaded — retry, or raise --stall-timeout / --timeout."
+        ) from None
+    except urllib.error.URLError as e:
+        raise GatewayError(f"network error contacting the image backend: {e.reason}") from None
 
     if not image_b64:
         types_seen = ", ".join(sorted(saw_event_types)) or "(none)"
         raise GatewayError(f"no image returned. events seen: {types_seen}")
 
-    if last_revised_prompt and verbose:
-        print(f"   revised_prompt: {last_revised_prompt[:120]}", file=sys.stderr)
+    if last_revised_prompt:
+        emit(f"revised prompt: {last_revised_prompt[:120]}")
 
     try:
         image_bytes = base64.b64decode(image_b64, validate=True)
@@ -396,11 +471,32 @@ def main() -> int:
     parser.add_argument(
         "--timeout",
         type=_positive_int,
-        default=180,
-        help="Total wall-clock budget for the request, in seconds (default: 180).",
+        default=DEFAULT_TOTAL_TIMEOUT,
+        help=f"Total wall-clock budget for the request, in seconds "
+             f"(default: {DEFAULT_TOTAL_TIMEOUT}). Large images can take 2-3 min.",
     )
-    parser.add_argument("--quiet", action="store_true", help="Print only the saved path on stdout")
+    parser.add_argument(
+        "--stall-timeout",
+        type=_positive_int,
+        default=int(DEFAULT_STALL_TIMEOUT),
+        help=f"Max seconds of silence (no SSE data) before the request is "
+             f"declared stalled (default: {int(DEFAULT_STALL_TIMEOUT)}). "
+             f"Clamped to --timeout.",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Print only the saved path on stdout (stderr progress is unaffected; "
+             "use --no-progress to silence it).",
+    )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Suppress the stderr progress timeline (errors are still shown).",
+    )
     args = parser.parse_args()
+    progress = not args.no_progress
+    stall_timeout = float(min(args.stall_timeout, args.timeout))
 
     auth = _load_auth()
     access, account_id, refresh = _extract_access_token(auth)
@@ -414,28 +510,30 @@ def main() -> int:
 
     version = _detect_codex_version()
     payload = _build_payload(args.prompt, args.size, args.format, args.model)
-    deadline = time.monotonic() + args.timeout
+    start = time.monotonic()
+    deadline = start + args.timeout
 
-    if not args.quiet:
-        print(f"-> POST {CODEX_BACKEND}", file=sys.stderr)
-        print(f"   prompt: {args.prompt[:80]}{'…' if len(args.prompt) > 80 else ''}", file=sys.stderr)
+    if progress:
+        prompt_preview = f"{args.prompt[:60]}{'…' if len(args.prompt) > 60 else ''}"
         print(
-            f"   size={args.size} format={args.format} model={args.model} "
-            f"codex_version={version} timeout={args.timeout}s",
+            f"[   0.0s] requesting image  (size={args.size} format={args.format} "
+            f"model={args.model} timeout={args.timeout}s stall={int(stall_timeout)}s)",
             file=sys.stderr,
         )
+        print(f"           prompt: {prompt_preview}", file=sys.stderr)
 
     def _attempt(token: str) -> tuple[bytes, JsonDict]:
         headers = _build_headers(token, account_id, version)
-        return _post_for_image(payload, headers, deadline, verbose=not args.quiet)
+        return _post_for_image(payload, headers, deadline, start, stall_timeout, progress)
 
     try:
         image_bytes, meta = _attempt(access)
     except GatewayError as e:
         # Auto-refresh on 401/403 once, then retry. Any other error → fail clean.
         if e.status in (401, 403) and refresh:
-            if not args.quiet:
-                print("   .. access token rejected; refreshing", file=sys.stderr)
+            if progress:
+                print(f"[{time.monotonic() - start:6.1f}s] access token expired; refreshing",
+                      file=sys.stderr)
             try:
                 refreshed = _refresh_access_token(refresh)
             except GatewayError as re_err:
@@ -469,18 +567,21 @@ def main() -> int:
             sys.exit(str(e))
 
     out_path = Path(args.out) if args.out else _default_out_path(args.prompt, args.format)
-    if args.out and not args.quiet:
+    if args.out and progress:
         _maybe_warn_extension_mismatch(out_path, args.format)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_bytes(image_bytes)
 
-    if args.quiet:
-        print(out_path)
-    else:
+    if progress:
         size_info = f"  size={meta.get('size')}" if meta.get("size") else ""
         quality_info = f"  quality={meta.get('quality')}" if meta.get("quality") else ""
-        print(f"-> saved: {out_path}  ({len(image_bytes):,} bytes){size_info}{quality_info}", file=sys.stderr)
-        print(out_path)
+        print(
+            f"[{time.monotonic() - start:6.1f}s] saved → {out_path}  "
+            f"({len(image_bytes):,} bytes){size_info}{quality_info}",
+            file=sys.stderr,
+        )
+    # stdout is always exactly the saved path, one line — safe for `$(...)` capture.
+    print(out_path)
     return 0
 
 
