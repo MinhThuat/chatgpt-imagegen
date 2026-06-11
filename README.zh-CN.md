@@ -52,32 +52,19 @@ OpenAI 的图像生成有两条完全独立的路:
 
 ## 安装
 
-你需要 Python 3.10+、一份 ChatGPT 订阅(Plus / Pro / Team),以及**至少配好一个后端**:
+你需要 Python 3.10+、一份 ChatGPT 订阅,以及**至少配好一个后端**(`auto` 会用其中配好的那个,优先 `web`):
 
-- **默认 `web` 后端:** 装好 [`agent-browser-stealth`](https://github.com/leeguooooo/agent-browser-stealth)(它提供 `agent-browser` / `abs` 命令),并把它的扩展连到一个登录了 chatgpt.com 的 Chrome。必须是 *stealth* 分支 —— 能过 Cloudflare 反爬的就是它。(省你的 Codex 用量额度。)
-- **`codex` 后端:** OpenAI Codex CLI(`npm i -g @openai/codex`)并一次性 `codex login`。
+**`codex` 后端** —— `npm i -g @openai/codex` 然后 `codex login`(写入 `~/.codex/auth.json`)。
 
-`auto` 模式会用其中可用的那个,优先 `web`。两个都配好,就有无缝回退。
-
-#### 配置 `web` 后端(agent-browser-stealth)
-
-**它是什么:** [`agent-browser-stealth`](https://github.com/leeguooooo/agent-browser-stealth) 是 `agent-browser` CLI 的 stealth(反检测)分支。它通过一个浏览器扩展 + 原生消息(native-messaging)中继,驱动你**真实、已登录的 Chrome** —— 于是请求带着真浏览器的 TLS 指纹和 cookie,能过 Cloudflare 反爬 + ChatGPT 的 sentinel 工作量证明。普通无头自动化客户端做不到这点,这就是 `web` 后端必须用 stealth 分支的原因。
-
-- **仓库:** https://github.com/leeguooooo/agent-browser-stealth
-- **Chrome 扩展:** [Chrome 应用商店里的 agent-browser-stealth](https://chromewebstore.google.com/detail/agent-browser-stealth/knfcmbamhjmaonkfnjhldjedeobeafmk)
+**`web` 后端** —— 装好 [`agent-browser-stealth`](https://github.com/leeguooooo/agent-browser-stealth)(`agent-browser` 的 stealth 分支;它通过扩展驱动你真实已登录的 Chrome,正是这点能过 Cloudflare + ChatGPT 反爬),并连到一个登录了 chatgpt.com 的 Chrome:
 
 ```bash
-# 1. 装 CLI(不用 npm、不用 token —— 装上 `agent-browser` / `abs` 命令)
 curl -fsSL https://raw.githubusercontent.com/leeguooooo/agent-browser-stealth/main/install.sh | sh
-
-# 2. 注册原生消息宿主
 agent-browser extension install
-
-# 3. 给 Chrome 装上扩展(上面的应用商店链接),然后重启 Chrome
-# 4. 在那个 Chrome 里登录 https://chatgpt.com
+# 然后:给 Chrome 装扩展 → 重启 Chrome → 登录 chatgpt.com
 ```
 
-扩展连上后,`chatgpt-imagegen`(web 后端)会自动驱动那个真实 Chrome —— 没有远程调试弹窗,也不另起浏览器。
+扩展:[Chrome 应用商店](https://chromewebstore.google.com/detail/agent-browser-stealth/knfcmbamhjmaonkfnjhldjedeobeafmk)。
 
 ### 方式 A —— 给 AI agent 用(推荐)
 
@@ -280,3 +267,11 @@ MIT —— 见 [LICENSE](./LICENSE)。
 ## 免责声明
 
 本工具调用的是 ChatGPT 内部的 `backend-api/codex` 接口,也就是官方 Codex CLI 用的同一个接口。它不是有文档的公开 API,OpenAI 随时可能更改或限制。使用风险自负,且须遵守 [OpenAI 使用条款](https://openai.com/policies/row-terms-of-use/) —— 尤其**不要用你的 ChatGPT 订阅去支撑对外公开的图像生成服务**。
+
+---
+
+## 关键词
+
+用 ChatGPT 订阅生成图片、免费 ChatGPT 账号生图、ChatGPT Plus 生图工具、不用 API key 生图、gpt-image-2 用订阅、ChatGPT 订阅生图 CLI、Codex CLI 生图能力独立工具、给 AI agent 用的生图 skill、本地生图脚本、零依赖 Python 生图工具。
+
+**English:** `ChatGPT subscription image generation`, `free ChatGPT account image generation`, `use ChatGPT Plus for image API`, `gpt-image-2 without OPENAI_API_KEY`, `image_generation tool Responses API`, `ChatGPT image CLI`, `Codex CLI image_gen as standalone tool`, `no-API-key image generation`, `AI agent image generation skill`, `Claude Code image skill`.
