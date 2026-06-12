@@ -131,8 +131,8 @@ OUT=$(chatgpt-imagegen "icon" --quiet)
 echo "saved to $OUT"
 ```
 
-<img src="./docs/example-doodle.png" width="320" alt="出图示例"><br>
-<sub>出图示例 —— 本工具生成(要求画一张"故意很烂"的老式画图程序原理图)。</sub>
+<img src="./docs/example-doodle.png" width="420" alt="出图示例"><br>
+<sub>出图示例 —— 本工具生成(让它把自己的双后端架构画成一张"故意很烂"、鼠标在老式画图程序里蹭出来的涂鸦)。</sub>
 
 ## 能做什么 / 不能做什么
 

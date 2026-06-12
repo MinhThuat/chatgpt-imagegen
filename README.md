@@ -133,8 +133,8 @@ OUT=$(chatgpt-imagegen "icon" --quiet)
 echo "saved to $OUT"
 ```
 
-<img src="./docs/example-doodle.png" width="320" alt="example output"><br>
-<sub>Example output — made by this tool (asked for a deliberately awful MS-Paint schematic).</sub>
+<img src="./docs/example-doodle.png" width="420" alt="example output"><br>
+<sub>Example output — made by this tool (asked to draw its own two-backend architecture as a deliberately awful, mouse-drawn MS-Paint doodle).</sub>
 
 ## What works / what doesn't
 
