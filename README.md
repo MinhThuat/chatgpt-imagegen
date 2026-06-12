@@ -133,8 +133,14 @@ OUT=$(chatgpt-imagegen "icon" --quiet)
 echo "saved to $OUT"
 ```
 
+Real output of the exact example commands above — every image in this README is made by this tool:
+
+| `watercolor cat sitting on a windowsill` | `logo for a coffee shop, vector style` | `moody mountain sunset` (1536×1024) |
+| --- | --- | --- |
+| <img src="./docs/gallery/watercolor-cat.png" width="240" alt="watercolor cat"> | <img src="./docs/gallery/coffee-logo.png" width="240" alt="coffee shop logo"> | <img src="./docs/gallery/mountain-sunset.png" width="240" alt="mountain sunset"> |
+
 <img src="./docs/example-doodle.png" width="420" alt="example output"><br>
-<sub>Example output — made by this tool (asked to draw its own two-backend architecture as a deliberately awful, mouse-drawn MS-Paint doodle).</sub>
+<sub>It can also do this — asked to draw its own two-backend architecture as a deliberately awful, mouse-drawn MS-Paint doodle.</sub>
 
 ## What works / what doesn't
 
@@ -149,16 +155,18 @@ echo "saved to $OUT"
 
 ## Concurrency
 
-You can fire multiple `chatgpt-imagegen` processes in parallel — the ChatGPT subscription backend handles concurrent `image_generation` calls fine. Measured on a Plus account, **4 simultaneous requests all returned 200**, total wall time ≈ slowest single (~27s), no serialization, no 429s.
+**`codex` backend only.** The ChatGPT subscription backend handles concurrent `image_generation` calls fine — measured on a Plus account, **4 simultaneous requests all returned 200**, total wall time ≈ slowest single (~27s), no serialization, no 429s.
 
 ```bash
-# Fire 4 in parallel from a shell:
+# Fire 4 in parallel from a shell (note: --backend codex):
 for p in apple sky tree sun; do
   chatgpt-imagegen "a tiny $p icon, flat vector, white background" \
-    -o "icons/$p.png" --quiet &
+    -o "icons/$p.png" --backend codex --quiet &
 done
 wait
 ```
+
+The **`web` backend must run sequentially** — parallel processes race to launch the same Chrome profiles, hit the profile lock, and all fail (measured: 3 parallel web runs each burned through every candidate profile and died). One web generation at a time.
 
 Caveat: subscription quota is shared with the ChatGPT web app and Codex CLI. Don't run sustained batches (>10 images/min) — you'll eventually hit per-day rate limits. For bulk batches, use the official `/v1/images/generations` API with an `OPENAI_API_KEY`.
 

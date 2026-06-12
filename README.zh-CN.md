@@ -131,8 +131,14 @@ OUT=$(chatgpt-imagegen "icon" --quiet)
 echo "saved to $OUT"
 ```
 
+上面那几条示例命令的真实输出 —— 本 README 里的每张图都是这个工具自己生成的:
+
+| `水彩猫坐在窗台上` | `咖啡店 logo,矢量风格` | `氛围感雪山日落`(1536×1024) |
+| --- | --- | --- |
+| <img src="./docs/gallery/watercolor-cat.png" width="240" alt="水彩猫"> | <img src="./docs/gallery/coffee-logo.png" width="240" alt="咖啡店 logo"> | <img src="./docs/gallery/mountain-sunset.png" width="240" alt="雪山日落"> |
+
 <img src="./docs/example-doodle.png" width="420" alt="出图示例"><br>
-<sub>出图示例 —— 本工具生成(让它把自己的双后端架构画成一张"故意很烂"、鼠标在老式画图程序里蹭出来的涂鸦)。</sub>
+<sub>它还能干这个 —— 让它把自己的双后端架构画成一张"故意很烂"、鼠标在老式画图程序里蹭出来的涂鸦。</sub>
 
 ## 能做什么 / 不能做什么
 
@@ -147,16 +153,18 @@ echo "saved to $OUT"
 
 ## 并发
 
-可以同时跑多个 `chatgpt-imagegen` 进程 —— ChatGPT 订阅后端能正常处理并发的 `image_generation` 调用。在 Plus 账号上实测:**4 个并发请求全部 200**,总墙钟 ≈ 最慢的那一个(约 27 秒),无串行、无 429。
+**仅限 `codex` 后端。** ChatGPT 订阅后端能正常处理并发的 `image_generation` 调用。在 Plus 账号上实测:**4 个并发请求全部 200**,总墙钟 ≈ 最慢的那一个(约 27 秒),无串行、无 429。
 
 ```bash
-# 从 shell 并发跑 4 个:
+# 从 shell 并发跑 4 个(注意 --backend codex):
 for p in apple sky tree sun; do
   chatgpt-imagegen "a tiny $p icon, flat vector, white background" \
-    -o "icons/$p.png" --quiet &
+    -o "icons/$p.png" --backend codex --quiet &
 done
 wait
 ```
+
+**`web` 后端必须串行** —— 多个进程并行会同时去 launch 同一批 Chrome profile,撞 profile 进程锁后全军覆没(实测:3 个并行 web 运行把候选 profile 挨个烧完、全部失败)。web 出图一次跑一张。
 
 注意:订阅额度和 ChatGPT 网页 app、Codex CLI **共享**。别持续狂跑(>10 张/分钟)—— 早晚会撞每日限流。批量需求请用官方 `/v1/images/generations` API + `OPENAI_API_KEY`。
 
