@@ -7,16 +7,48 @@
 
 ---
 
-## Bước 1 — Cài Python
+## Bước 1 — Cài Python (không cần quyền Admin)
 
-1. Truy cập https://python.org/downloads
-2. Tải phiên bản mới nhất (Python 3.11 hoặc 3.12)
-3. Chạy installer, **tick vào "Add Python to PATH"** trước khi nhấn Install
-4. Kiểm tra: mở terminal, gõ `python --version` → phải thấy `Python 3.x.x`
+**Cách A — Microsoft Store (dễ nhất, không cần admin):**
+1. Mở Microsoft Store, tìm **Python 3.12**
+2. Nhấn **Get** → tự cài, không hỏi quyền admin
+3. Kiểm tra: mở terminal, gõ `python --version`
+
+**Cách B — python.org (không cần admin):**
+1. Tải tại https://python.org/downloads
+2. Chạy installer → chọn **"Install for my user only (recommended)"**
+3. **Tick vào "Add Python to PATH"** trước khi nhấn Install
+
+**Cách C — Portable (không cài, chỉ giải nén):**
+1. Tải file `python-3.12.x-embed-amd64.zip` tại https://python.org/downloads/windows
+2. Giải nén vào thư mục ví dụ `C:\Users\TenBan\python312`
+3. Mở `start.bat` → nhập đường dẫn này khi được hỏi
 
 ---
 
-## Bước 2 — Cài Claude Code
+## Bước 2 — Cài Node.js (không cần quyền Admin)
+
+**Cách A — Portable ZIP (không cần admin, không cần cài):**
+1. Tải `node-v20.x.x-win-x64.zip` tại https://nodejs.org/en/download (chọn tab **Prebuilt Binaries** → **zip**)
+2. Giải nén vào `C:\Users\TenBan\nodejs`
+3. Thêm vào PATH: mở **Start** → tìm **"Edit environment variables for your account"** → chọn **Path** → **Edit** → **New** → dán đường dẫn thư mục vừa giải nén
+4. Mở terminal mới, gõ `node --version` để kiểm tra
+
+**Cách B — Scoop (package manager không cần admin):**
+1. Mở PowerShell, chạy:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+```
+2. Sau đó:
+```
+scoop install nodejs python
+```
+> Scoop cài mọi thứ vào `C:\Users\TenBan\scoop\` — không đụng đến system, không cần admin.
+
+---
+
+## Bước 3 — Cài Claude Code
 
 1. Truy cập https://claude.ai/code và tải Claude Code Desktop cho Windows
 2. Cài đặt và đăng nhập tài khoản Claude
@@ -24,7 +56,7 @@
 
 ---
 
-## Bước 3 — Cài Codex CLI
+## Bước 4 — Cài Codex CLI
 
 Mở terminal trong Claude Code (hoặc Windows Terminal), chạy:
 
@@ -32,11 +64,9 @@ Mở terminal trong Claude Code (hoặc Windows Terminal), chạy:
 npm install -g @openai/codex
 ```
 
-> Nếu máy chưa có Node.js: tải tại https://nodejs.org (chọn LTS)
-
 ---
 
-## Bước 4 — Đăng nhập ChatGPT
+## Bước 5 — Đăng nhập ChatGPT
 
 ```
 codex login
@@ -46,7 +76,7 @@ Trình duyệt sẽ mở ra → đăng nhập tài khoản ChatGPT bình thườ
 
 ---
 
-## Bước 5 — Thiết lập tự động refresh token
+## Bước 6 — Thiết lập tự động refresh token
 
 Chạy 1 lần trong terminal (quyền Admin):
 
@@ -60,7 +90,7 @@ Register-ScheduledTask -TaskName "CodexTokenRefresh" -Action $action -Trigger $t
 
 ---
 
-## Bước 6 — Đặt ảnh tham chiếu
+## Bước 7 — Đặt ảnh tham chiếu
 
 Đặt các ảnh tham chiếu vào thư mục `anh_tham_chieu\`:
 
