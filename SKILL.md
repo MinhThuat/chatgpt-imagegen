@@ -136,6 +136,25 @@ A **style** is a named, reusable prompt snippet stored in `~/.config/chatgpt-ima
 5. **Inspect the result** if you can (e.g. with a `view_image` tool or by reading the file). If clearly wrong, iterate with a single targeted prompt change — do not loop blindly (each call costs subscription quota).
 6. **Report the saved path** plus the final prompt used.
 
+## Illustrating documents
+
+When you're authoring a document, blog post, technical proposal, design doc, or other long-form explanatory content, **proactively illustrate the key concepts** — you don't need to be asked. The flow:
+
+1. **Announce a brief plan first.** In one or two lines, say where figures will go and what each depicts (e.g. *"I'll add two figures: (1) the request→SSE flow, (2) the token-refresh path."*). Then generate — don't wait for approval; the plan is the reader's chance to redirect.
+2. **Fan out background subagents — one per figure.** Each runs the CLI with `--quiet -o <path>` so stdout is just the saved path; keep writing the prose while they render, and embed each image when it lands. Spawn them as background tasks with your own agent/task tooling — one figure per task, never blocking the writing.
+3. **Parallelism depends on the user's backend — don't override it.** Honour the user's `--backend` / `CHATGPT_IMAGEGEN_BACKEND` (default `auto`). On the **`web`** backend, concurrency is **1** — background figures **queue** and render one at a time (still fine: it's in the background, and it spends no Codex-usage). On **`codex`**, up to **4** render in parallel but each bills the metered Codex-usage bucket. Which backend to spend is the user's trade-off, not yours.
+4. **Choose a style to fit the document's tone.** There's no default illustration style. For informal or blog-style explainers, the built-in **`doodle`** look fits well — deliberately crude, content-accurate (`--style doodle`). For polished specs, pick a cleaner look or a style you've defined (see [Styles](#styles)).
+5. **Don't over-illustrate.** At most one figure per major concept; never decorate for its own sake; and **never loop generating "variants" of the same figure** — that just burns subscription quota. If a figure comes out wrong, change the prompt once and regenerate, don't spray.
+
+### Writing figure prompts
+
+A vague prompt yields a useless figure. Make the prompt describe the figure's **content**, not just name it:
+
+- Spell out the **boxes, arrows, labels, layout, and relationships** — "an architecture diagram" is too vague; say *what's in it* and how the parts connect.
+- **One subject, one concept** per figure. Split a busy diagram into two.
+- **Name the style** you want explicitly in the prompt or via `--style`.
+- For the **`doodle`** look, remember **content accuracy beats polish** — it's supposed to look crude and hand-drawn, but the labels and structure must still be readable.
+
 ## Limits
 
 - **Image quality** is chosen by the backend; this skill has no `--quality` flag, and the subscription path does not honour explicit quality requests reliably. Don't promise a specific quality level to the user. If they need explicit `quality=high`, route them to the official `/v1/images/generations` API with their own `OPENAI_API_KEY`.
