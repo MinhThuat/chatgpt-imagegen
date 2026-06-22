@@ -20,3 +20,16 @@ assets/generated/
 
 # Personal drafts / promo material — not part of the published skill
 drafts/
+
+# User-specific generated scripts (created per session by Claude Code)
+run_*.ps1
+
+# Output folders (generated images)
+out_*/
+
+# Personal reference images (each user has their own)
+anh_tham_chieu/
+
+# chrome-use binaries (platform-specific, download separately)
+chrome-use-bin/
+*.tar.gz

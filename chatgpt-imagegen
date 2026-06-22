@@ -35,7 +35,31 @@ from __future__ import annotations
 
 import argparse
 import base64
-import fcntl
+try:
+    import fcntl
+except ImportError:  # Windows
+    import msvcrt
+
+    class fcntl:  # type: ignore[no-redef]
+        LOCK_EX = 0x1
+        LOCK_NB = 0x4
+        LOCK_UN = 0x8
+
+        @staticmethod
+        def flock(f, operation):
+            if operation & fcntl.LOCK_UN:
+                try:
+                    f.seek(0)
+                    msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+                except OSError:
+                    pass
+                return
+            mode = msvcrt.LK_NBLCK if (operation & fcntl.LOCK_NB) else msvcrt.LK_LOCK
+            f.seek(0)
+            try:
+                msvcrt.locking(f.fileno(), mode, 1)
+            except OSError:
+                raise OSError("lock unavailable")
 import json
 import os
 import re
@@ -783,11 +807,16 @@ def _codex_token_present() -> bool:
 
 def _chrome_user_data_dirs() -> list[Path]:
     home = Path.home()
-    return [
+    dirs = [
         home / "Library" / "Application Support" / "Google" / "Chrome",  # macOS
         home / ".config" / "google-chrome",                              # Linux
         home / ".config" / "chromium",
     ]
+    # Windows
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        dirs.insert(0, Path(local_app_data) / "Google" / "Chrome" / "User Data")
+    return dirs
 
 
 def _detect_logged_in_profiles() -> list[str]:
