@@ -111,6 +111,8 @@ chatgpt-imagegen "<prompt>" [options]
 | `--keep-conversation` | off | *(web)* Keep the ChatGPT conversation after generating. **Default deletes it** so the run leaves no history (filed under the project only transiently). Also `CHATGPT_IMAGEGEN_KEEP_CONVERSATION=1`. |
 | `--web-model` | `Instant,Auto` | *(web)* Comma-separated model/effort candidates; the first one present in the picker is selected before generating. The **`Pro`** tier has no native image generator (it answers image requests by writing Python), so the web backend switches off it automatically. Pass `""` to keep whatever is selected. Also `CHATGPT_IMAGEGEN_WEB_MODEL`. |
 | `-i`, `--ref PATH_OR_URL` | — | **Image-to-image.** Reference image to edit (repeatable for multiple references). A local path or `http(s)` URL. When given, the model edits the reference(s) instead of rendering from text. Works on **both** backends. See [Image-to-image](#image-to-image). |
+| `--style NAME` | — | Apply a saved [style](#styles) preset's text to this prompt (appended as a suffix). Overrides the active default for this run. |
+| `--no-style` | off | Skip styles for this run even if an active default is set. |
 | `-o`, `--out PATH` | `assets/generated/<slug>.<ext>` | Output file; parent dirs created. A warning is printed when the suffix and `--format` disagree (e.g. `-o foo.jpg --format png`). |
 | `--size` | `auto` | `auto` or any `WIDTHxHEIGHT`. Verified working: `1024x1024`, `1024x1536`, `1536x1024`. Larger sizes are forwarded as-is. |
 | `--format` | `png` | `png` \| `jpeg` \| `webp` |
@@ -137,6 +139,39 @@ chatgpt-imagegen "moody mountain sunset" -o web/hero.png --size 1536x1024
 OUT=$(chatgpt-imagegen "icon" --quiet)
 echo "saved to $OUT"
 ```
+
+## Styles
+
+A **style** is a named, reusable snippet of prompt text. Apply one with `--style NAME` and it's appended to your prompt as a suffix — so `--style doodle` turns `a cat` into `a cat, drawn as a deliberately crude doodle …`. Styles live in a small JSON file (`~/.config/chatgpt-imagegen/styles.json`, honouring `$XDG_CONFIG_HOME`), seeded on first use with one built-in style, `doodle` — the deliberately-awful MS-Paint look the [example below](#image-to-image) is drawn in.
+
+There is **no default style out of the box** — nothing changes unless you opt in with `--style` or set an active default. Manage them with the `style` subcommand:
+
+| Command | What it does |
+| --- | --- |
+| `chatgpt-imagegen style list` | List all styles; the active default (if any) is marked `*` |
+| `chatgpt-imagegen style show NAME` | Print one style's full snippet |
+| `chatgpt-imagegen style add NAME "snippet"` | Create or overwrite a style |
+| `chatgpt-imagegen style rm NAME` | Delete a style |
+| `chatgpt-imagegen style use NAME` | Set NAME as the **active default** — auto-applied to every run |
+| `chatgpt-imagegen style clear` | Unset the active default |
+| `chatgpt-imagegen style reset` | Re-seed the built-in styles (discards your edits; `-y` skips the prompt) |
+
+At generation time:
+
+```bash
+# Apply a style for one run
+chatgpt-imagegen "a robot mascot" --style doodle
+
+# Save your own house style once, then make it the default
+chatgpt-imagegen style add brand "flat vector, bold shapes, teal #00b3a4 accent, white background"
+chatgpt-imagegen style use brand
+chatgpt-imagegen "a settings icon"            # → uses the brand style automatically
+
+# Skip the active default for one run
+chatgpt-imagegen "a photorealistic forest" --no-style
+```
+
+Resolution order per run: `--no-style` wins, else `--style NAME`, else the active default, else no style. The snippet only affects the text sent to the model — your output filename and the prompt shown in the progress log stay your raw prompt.
 
 ## Image-to-image
 

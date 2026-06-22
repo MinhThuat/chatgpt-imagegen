@@ -110,6 +110,8 @@ chatgpt-imagegen "<prompt>" [options]
 | `-o`, `--out PATH` | `assets/generated/<slug>.<ext>` | 输出文件;父目录自动创建。后缀与 `--format` 不一致时会告警(如 `-o foo.jpg --format png`)。 |
 | `--size` | `auto` | `auto` 或任意 `WIDTHxHEIGHT`。已验证:`1024x1024`、`1024x1536`、`1536x1024`。更大尺寸原样透传。 |
 | `--format` | `png` | `png` \| `jpeg` \| `webp` |
+| `--style NAME` | — | 给这次 prompt 套用一个保存好的[风格](#风格)预设(作为后缀拼接)。本次运行覆盖 active 默认。 |
+| `--no-style` | 关 | 即使设了 active 默认,本次运行也跳过风格。 |
 | `--model` | `gpt-5.5` | 承载 `image_generation` 工具的对话模型 |
 | `--timeout` | `300` | 整个请求的**总墙钟预算**(秒)。大图/细节图可能 2–3 分钟。 |
 | `--stall-timeout` | `120` | 后端静默多少秒判定为**卡死**(早于总预算触发)。会被钳制到 `--timeout`。 |
@@ -142,6 +144,39 @@ echo "saved to $OUT"
 
 <img src="./docs/example-doodle.png" width="420" alt="出图示例"><br>
 <sub>它还能干这个 —— 让它把自己的双后端架构画成一张"故意很烂"、鼠标在老式画图程序里蹭出来的涂鸦。</sub>
+
+## 风格
+
+**风格(style)**就是一段有名字、可复用的提示词片段。用 `--style NAME` 套用,它会作为后缀拼到你的 prompt 后面 —— 比如 `--style doodle` 会把 `a cat` 变成 `a cat, drawn as a deliberately crude doodle …`。风格存在一个小 JSON 文件里(`~/.config/chatgpt-imagegen/styles.json`,遵循 `$XDG_CONFIG_HOME`),首次使用时预置一个内置风格 `doodle` —— 就是上面那张涂鸦图那种"故意很烂"的鼠绘画图程序风。
+
+**开箱没有默认风格** —— 不主动用 `--style`、也不设 active 默认,行为就和以前完全一样。用 `style` 子命令管理:
+
+| 命令 | 作用 |
+| --- | --- |
+| `chatgpt-imagegen style list` | 列出所有风格;active 默认(若有)标 `*` |
+| `chatgpt-imagegen style show NAME` | 打印某个风格的完整片段 |
+| `chatgpt-imagegen style add NAME "片段"` | 新增或覆盖一个风格 |
+| `chatgpt-imagegen style rm NAME` | 删除一个风格 |
+| `chatgpt-imagegen style use NAME` | 把 NAME 设为 **active 默认** —— 每次出图自动套用 |
+| `chatgpt-imagegen style clear` | 取消 active 默认 |
+| `chatgpt-imagegen style reset` | 重新预置内置风格(会丢弃你的改动;`-y` 跳过确认) |
+
+出图时:
+
+```bash
+# 单次套用某风格
+chatgpt-imagegen "a robot mascot" --style doodle
+
+# 把自己的品牌风格存一次,再设成默认
+chatgpt-imagegen style add brand "flat vector, bold shapes, teal #00b3a4 accent, white background"
+chatgpt-imagegen style use brand
+chatgpt-imagegen "a settings icon"            # → 自动用 brand 风格
+
+# 单次跳过 active 默认
+chatgpt-imagegen "a photorealistic forest" --no-style
+```
+
+每次出图的解析顺序:`--no-style` 最优先,其次 `--style NAME`,再次 active 默认,都没有就不套风格。片段只影响发给模型的文字 —— 输出文件名和进度日志里显示的 prompt 仍是你的原始 prompt。
 
 ## 能做什么 / 不能做什么
 

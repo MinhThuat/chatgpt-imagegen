@@ -99,6 +99,8 @@ Useful flags:
 | `--size 1024x1536` | Portrait covers, mobile splashes (verified) |
 | `--size 3840x2160` or similar | 4K landscape (forwarded as-is; backend may reject — fall back to a smaller verified size on failure) |
 | `--format webp` | Smaller files for web assets |
+| `--style NAME` | Apply a saved style preset (appended to the prompt as a suffix). See [Styles](#styles). Overrides any active default for this run. |
+| `--no-style` | Skip styles for this run even if the user set an active default. |
 | `--quiet` | Use in agent contexts so stdout is *only* the saved path. Progress still streams to stderr (use `--no-progress` to silence it). |
 | `--no-progress` | Fully silence the stderr progress timeline (errors still print). |
 | `--timeout SECONDS` | Total wall-clock budget (default 300). Large/detailed images can take 2–3 min — raise it if you see a `timed out` error. |
@@ -106,6 +108,15 @@ Useful flags:
 | `-V`, `--version` | Print the CLI version and exit. Run `chatgpt-imagegen --version` to confirm which build is installed. |
 
 The script prints **just the saved path on stdout** in every mode; the readable progress timeline and any errors go to **stderr**, so `OUT=$(chatgpt-imagegen "..." --quiet)` captures only the path while you still see the timeline. Each timeline line is stamped with elapsed seconds (`[ 12.3s] generating`), so a slow run is legible and a stall is obvious.
+
+## Styles
+
+A **style** is a named, reusable prompt snippet stored in `~/.config/chatgpt-imagegen/styles.json` (honours `$XDG_CONFIG_HOME`). `--style NAME` appends that snippet to the prompt as a suffix; it changes only the text sent to the model, not the output filename. There is **no default style out of the box** — generation is unchanged unless the user opts in.
+
+- Apply one for a run: `chatgpt-imagegen "..." --style doodle`.
+- When a project has a consistent look, capture it **once** and reuse it across the session instead of pasting the same long style text into every prompt: `chatgpt-imagegen style add proj "<the house-style sentence>"`, then pass `--style proj` per run (or `chatgpt-imagegen style use proj` to make it the active default).
+- `chatgpt-imagegen style list` shows what's available (the active default is marked `*`); `chatgpt-imagegen style show NAME` prints a snippet in full; `--no-style` skips an active default for one run.
+- One built-in style ships: `doodle` (the deliberately-crude MS-Paint look). Resolution order per run: `--no-style` > `--style NAME` > active default > none. An unknown `--style` fails fast (before any browser/codex work), listing the available names.
 
 ## Save-path policy
 
