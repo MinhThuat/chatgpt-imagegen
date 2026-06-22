@@ -79,6 +79,35 @@ class IsUrl(unittest.TestCase):
         self.assertFalse(cig._is_url("ftp://x.com/a.png"))
 
 
+class ValidStyleName(unittest.TestCase):
+    def test_accepts_slugs(self):
+        for ok in ("doodle", "flat-icon", "v2", "a", "my_style"):
+            self.assertTrue(cig._valid_style_name(ok), ok)
+
+    def test_rejects_bad(self):
+        for bad in ("", "Doodle", "has space", "-leading", "_leading", "with.dot", "藝術"):
+            self.assertFalse(cig._valid_style_name(bad), bad)
+
+
+class ComposePrompt(unittest.TestCase):
+    def test_appends_with_comma(self):
+        self.assertEqual(cig._compose_prompt("a cat", "watercolor"), "a cat, watercolor")
+
+    def test_none_or_blank_snippet_unchanged(self):
+        self.assertEqual(cig._compose_prompt("a cat", None), "a cat")
+        self.assertEqual(cig._compose_prompt("a cat", "   "), "a cat")
+
+    def test_strips_one_trailing_punct(self):
+        self.assertEqual(cig._compose_prompt("a cat.", "watercolor"), "a cat, watercolor")
+        self.assertEqual(cig._compose_prompt("a cat, ", "watercolor"), "a cat, watercolor")
+
+    def test_empty_prompt_yields_snippet(self):
+        self.assertEqual(cig._compose_prompt("", "watercolor"), "watercolor")
+
+    def test_snippet_is_trimmed(self):
+        self.assertEqual(cig._compose_prompt("a cat", "  watercolor  "), "a cat, watercolor")
+
+
 class BuildWebText(unittest.TestCase):
     def test_plain_has_no_codex_tool_wording(self):
         t = cig._build_web_text("a red apple", "auto")

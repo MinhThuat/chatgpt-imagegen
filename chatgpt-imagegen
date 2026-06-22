@@ -1834,6 +1834,46 @@ def _dispatch(
         )
 
 
+# ── Style presets ──────────────────────────────────────────────────────────
+# Named, reusable prompt snippets appended (as a comma-joined suffix) to the
+# user's prompt. Stored in ~/.config/chatgpt-imagegen/styles.json; seeded once
+# from the built-ins below and never auto-overwritten (use `style reset`).
+_BUILTIN_STYLES = {
+    "doodle": (
+        "drawn as a deliberately crude doodle using the biggest possible blocks "
+        "of color, leaning hard into a scribbly, pathetically bad look. White "
+        "background, as if drawn with a mouse in an old-school computer paint "
+        "program. It should be faintly recognizable yet not quite right — like "
+        "it almost matches but everything is subtly off, awkward and confusing. "
+        "Low-res, smeared together pixel by pixel, showing off just how absurdly "
+        "bad it is. Honestly, draw it however you want — but the content must "
+        "still be readable."
+    ),
+}
+
+_STYLE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+
+
+def _valid_style_name(name: str) -> bool:
+    """A style name is a lowercase slug: alnum/-/_ , starting alphanumeric."""
+    return bool(_STYLE_NAME_RE.match(name or ""))
+
+
+def _compose_prompt(user_prompt: str, snippet: str | None) -> str:
+    """Append a style snippet to the prompt as a comma-joined suffix.
+
+    Blank/None snippet → prompt unchanged. A single trailing ','/'.' on the
+    prompt is dropped so the join reads cleanly. Pure; no I/O.
+    """
+    if not snippet or not snippet.strip():
+        return user_prompt
+    base = user_prompt.rstrip()
+    if base and base[-1] in ",.":
+        base = base[:-1].rstrip()
+    snippet = snippet.strip()
+    return f"{base}, {snippet}" if base else snippet
+
+
 # ---------- main ----------
 
 def main() -> int:
