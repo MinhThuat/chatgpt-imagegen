@@ -3,12 +3,27 @@ chcp 65001 >nul
 title chatgpt-imagegen
 
 echo [1/3] Dang kiem tra cap nhat...
-git pull
-if %errorlevel% neq 0 (
-    echo Khong the pull. Kiem tra ket noi mang hoac lien he ho tro.
-    pause
-    exit /b 1
-)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$url = 'https://github.com/MinhThuat/chatgpt-imagegen/archive/refs/heads/main.zip';" ^
+  "$zip = [System.IO.Path]::GetTempFileName() + '.zip';" ^
+  "$extract = [System.IO.Path]::GetTempPath() + 'cgi_update';" ^
+  "try {" ^
+  "  Invoke-WebRequest $url -OutFile $zip -UseBasicParsing -ErrorAction Stop;" ^
+  "  if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }" ^
+  "  Expand-Archive $zip $extract -Force;" ^
+  "  $src = '$extract\chatgpt-imagegen-main';" ^
+  "  $dst = '%~dp0';" ^
+  "  $skip = @('anh_tham_chieu','out_','run_','.codex','__pycache__');" ^
+  "  Get-ChildItem $src | Where-Object {" ^
+  "    $name = $_.Name;" ^
+  "    -not ($skip | Where-Object { $name -like $_ + '*' })" ^
+  "  } | ForEach-Object { Copy-Item $_.FullName $dst -Recurse -Force };" ^
+  "  Remove-Item $zip -Force;" ^
+  "  Remove-Item $extract -Recurse -Force;" ^
+  "  Write-Host 'Cap nhat thanh cong.'" ^
+  "} catch {" ^
+  "  Write-Host 'Khong the cap nhat (co the do mat mang). Tiep tuc voi phien ban hien tai...'" ^
+  "}"
 
 echo.
 echo [2/3] Kiem tra token...
@@ -26,4 +41,3 @@ if %errorlevel% neq 0 (
 echo.
 echo [3/3] Mo Claude Code...
 claude .
-
