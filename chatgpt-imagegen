@@ -1315,7 +1315,7 @@ def run_web(
     # blocked on the serialize lock (issue #7) before reaching here, and that
     # queue wait must not eat into the --timeout image budget.
     deadline = time.monotonic() + args.timeout
-    user_text = _build_web_text(args.prompt, args.size, is_edit=bool(refs))
+    user_text = _build_web_text(args.gen_prompt, args.size, is_edit=bool(refs))
 
     def emit(msg: str) -> None:
         if progress:
@@ -1698,7 +1698,7 @@ def run_codex(
             )
 
     version = _detect_codex_version()
-    payload = _build_payload(args.prompt, args.size, args.format, args.model,
+    payload = _build_payload(args.gen_prompt, args.size, args.format, args.model,
                              refs=loaded_refs)
 
     with _concurrency_slot("codex", _backend_limit("codex", CODEX_CONCURRENCY_DEFAULT),
@@ -2051,6 +2051,8 @@ def _style_command(argv: list[str]) -> int:
 # ---------- main ----------
 
 def main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] == "style":
+        return _style_command(sys.argv[2:])
     parser = argparse.ArgumentParser(
         description="Generate an image with your ChatGPT subscription (no API key)."
     )
@@ -2059,6 +2061,17 @@ def main() -> int:
         version=f"chatgpt-imagegen {__version__}",
     )
     parser.add_argument("prompt", help="Description of the image to generate")
+    style_grp = parser.add_mutually_exclusive_group()
+    style_grp.add_argument(
+        "--style", default=None, metavar="NAME",
+        help="Apply a saved style preset's text to this prompt "
+             "(see `chatgpt-imagegen style list`). Overrides the active "
+             "default for this run.",
+    )
+    style_grp.add_argument(
+        "--no-style", action="store_true",
+        help="Skip styles for this run even if an active default is set.",
+    )
     parser.add_argument("-o", "--out", help="Output file path (default: assets/generated/<slug>.<ext>)")
     parser.add_argument(
         "--size",
@@ -2164,6 +2177,11 @@ def main() -> int:
         help="Suppress the stderr progress timeline (errors are still shown).",
     )
     args = parser.parse_args()
+    _styles_doc = _load_styles()
+    _style_name = _resolve_style_name(
+        _styles_doc, style_arg=args.style, no_style=args.no_style)
+    _snippet = _styles_doc["styles"][_style_name] if _style_name else None
+    args.gen_prompt = _compose_prompt(args.prompt, _snippet)
     progress = not args.no_progress
     stall_timeout = float(min(args.stall_timeout, args.timeout))
     start = time.monotonic()
@@ -2176,6 +2194,8 @@ def main() -> int:
             file=sys.stderr,
         )
         print(f"           prompt: {prompt_preview}", file=sys.stderr)
+        if _style_name:
+            print(f"           style: {_style_name}", file=sys.stderr)
 
     image_bytes, meta = _dispatch(args, progress, stall_timeout, start)
 
