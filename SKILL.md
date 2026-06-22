@@ -64,6 +64,7 @@ That writes `~/.codex/auth.json`, which the codex backend reads. No `OPENAI_API_
 - The user asks for a new photo, illustration, icon, hero banner, sprite, cover image, infographic, product mockup, concept art, or any other bitmap deliverable for the current project.
 - The user is happy with subscription-tier quality (`medium` quality, no native transparent backgrounds — see *Limits* below).
 - The deliverable is intended to be saved into the repo or build inputs.
+- You're authoring long-form or explanatory content — a blog post, technical proposal, design doc, tutorial, postmortem, or README — and a figure would help a concept land. **You don't need to be asked**: propose the figures and generate them (see *[Illustrating documents](#illustrating-documents)* below).
 
 ## When not to use
 
