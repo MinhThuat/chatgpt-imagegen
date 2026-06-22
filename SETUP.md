@@ -9,56 +9,40 @@
 
 ## Bước 1 — Cài Python (không cần quyền Admin)
 
-**Cách A — Microsoft Store (dễ nhất, không cần admin):**
-1. Mở Microsoft Store, tìm **Python 3.12**
-2. Nhấn **Get** → tự cài, không hỏi quyền admin
-3. Kiểm tra: mở terminal, gõ `python --version`
-
-**Cách B — python.org (không cần admin):**
-1. Tải tại https://python.org/downloads
-2. Chạy installer → chọn **"Install for my user only (recommended)"**
-3. **Tick vào "Add Python to PATH"** trước khi nhấn Install
-
-**Cách C — Portable (không cài, chỉ giải nén):**
-1. Tải file `python-3.12.x-embed-amd64.zip` tại https://python.org/downloads/windows
-2. Giải nén vào thư mục ví dụ `C:\Users\TenBan\python312`
-3. Mở `start.bat` → nhập đường dẫn này khi được hỏi
+1. Tải installer tại https://python.org/downloads (chọn phiên bản mới nhất)
+2. Chạy file `.exe` vừa tải
+3. **Quan trọng:** Ở màn hình đầu tiên:
+   - Tick vào **"Add Python to PATH"**
+   - Chọn **"Install for my user only"** (không cần admin)
+4. Nhấn Install và chờ xong
+5. Kiểm tra: mở terminal, gõ `python --version` → thấy `Python 3.x.x` là OK
 
 ---
 
 ## Bước 2 — Cài Node.js (không cần quyền Admin)
 
-**Cách A — Portable ZIP (không cần admin, không cần cài):**
-1. Tải `node-v20.x.x-win-x64.zip` tại https://nodejs.org/en/download (chọn tab **Prebuilt Binaries** → **zip**)
-2. Giải nén vào `C:\Users\TenBan\nodejs`
-3. Thêm vào PATH: mở **Start** → tìm **"Edit environment variables for your account"** → chọn **Path** → **Edit** → **New** → dán đường dẫn thư mục vừa giải nén
-4. Mở terminal mới, gõ `node --version` để kiểm tra
-
-**Cách B — Scoop (package manager không cần admin):**
-1. Mở PowerShell, chạy:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
-```
-2. Sau đó:
-```
-scoop install nodejs python
-```
-> Scoop cài mọi thứ vào `C:\Users\TenBan\scoop\` — không đụng đến system, không cần admin.
+1. Vào https://nodejs.org/en/download → chọn tab **Prebuilt Binaries**
+2. Chọn **Windows** / **x64** / **zip** → tải file `.zip` về
+3. Giải nén vào thư mục bất kỳ trong máy, ví dụ: `C:\Users\TenBan\nodejs`
+4. Thêm vào PATH của user (không phải system):
+   - Nhấn **Start** → gõ tìm **"Edit environment variables for your account"** → mở ra
+   - Ở phần **User variables** (phía trên), chọn dòng **Path** → nhấn **Edit**
+   - Nhấn **New** → dán đường dẫn thư mục nodejs vừa giải nén vào
+   - Nhấn **OK** → **OK**
+5. Mở terminal **mới**, gõ `node --version` → thấy `v20.x.x` là OK
 
 ---
 
 ## Bước 3 — Cài Claude Code
 
-1. Truy cập https://claude.ai/code và tải Claude Code Desktop cho Windows
+1. Tải Claude Code Desktop tại https://claude.ai/code
 2. Cài đặt và đăng nhập tài khoản Claude
-3. Mở thư mục dự án này bằng Claude Code (File → Open Folder)
 
 ---
 
 ## Bước 4 — Cài Codex CLI
 
-Mở terminal trong Claude Code (hoặc Windows Terminal), chạy:
+Mở terminal (hoặc terminal trong Claude Code), chạy:
 
 ```
 npm install -g @openai/codex
@@ -72,27 +56,36 @@ npm install -g @openai/codex
 codex login
 ```
 
-Trình duyệt sẽ mở ra → đăng nhập tài khoản ChatGPT bình thường.
+Trình duyệt tự mở → đăng nhập tài khoản ChatGPT bình thường → đóng lại.
 
 ---
 
 ## Bước 6 — Thiết lập tự động refresh token
 
-Chạy 1 lần trong terminal (quyền Admin):
+Mở terminal, chạy lệnh sau (không cần admin):
 
 ```powershell
-$action  = New-ScheduledTaskAction -Execute "python" -Argument "D:\vsc\chatgpt-imagegen\refresh_token.py"
+$action  = New-ScheduledTaskAction -Execute "python" -Argument "$PSScriptRoot\refresh_token.py"
 $trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 30) -Once -At (Get-Date)
-Register-ScheduledTask -TaskName "CodexTokenRefresh" -Action $action -Trigger $trigger -RunLevel Highest -Force
+Register-ScheduledTask -TaskName "CodexTokenRefresh" -Action $action -Trigger $trigger -Force
 ```
 
-> Sau khi setup, token sẽ tự gia hạn mỗi 30 phút. Nếu thấy pop-up "Cần đăng nhập lại" → quay lại Bước 4.
+> Token sẽ tự gia hạn mỗi 30 phút. Nếu thấy pop-up "Cần đăng nhập lại" → quay lại Bước 5.
 
 ---
 
-## Bước 7 — Đặt ảnh tham chiếu
+## Bước 7 — Lấy code về và chạy lần đầu
 
-Đặt các ảnh tham chiếu vào thư mục `anh_tham_chieu\`:
+1. Vào https://github.com/MinhThuat/chatgpt-imagegen
+2. Nhấn **Code** → **Download ZIP** → giải nén ra thư mục tùy chọn
+3. Vào thư mục vừa giải nén → double-click **`start.bat`**
+4. Lần tiếp theo chỉ cần double-click `start.bat` — tự cập nhật và mở Claude Code
+
+---
+
+## Bước 8 — Đặt ảnh tham chiếu
+
+Tạo thư mục `anh_tham_chieu\` trong thư mục dự án và đặt ảnh vào:
 
 | File | Nội dung |
 |------|----------|
@@ -105,11 +98,10 @@ Register-ScheduledTask -TaskName "CodexTokenRefresh" -Action $action -Trigger $t
 
 ## Cách sử dụng hàng ngày
 
-1. Mở thư mục dự án bằng **Claude Code**
-2. Chat bằng tiếng Việt, ví dụ:
+1. Double-click **`start.bat`**
+2. Claude Code mở ra → chat bằng tiếng Việt, ví dụ:
    - *"Tạo 8 ảnh mockup cốc sứ in hình thú cưng, mỗi ảnh 1-2 cốc, đổi màu và đổi tên"*
    - *"Chạy lại ảnh số 3 với background khác"*
-   - *"Xem lại kết quả trong out_pod"*
 3. Claude Code tự viết script và chạy, chỉ cần chờ kết quả
 
 ---
@@ -118,7 +110,8 @@ Register-ScheduledTask -TaskName "CodexTokenRefresh" -Action $action -Trigger $t
 
 | Triệu chứng | Cách xử lý |
 |-------------|------------|
-| Pop-up "Cần đăng nhập lại" | Chạy `codex login` trong terminal |
+| Pop-up "Cần đăng nhập lại" | Mở terminal, chạy `codex login` |
+| `python` không nhận ra | Cài lại Python, nhớ tick "Add to PATH" và chọn "for my user only" |
+| `node` không nhận ra | Kiểm tra lại đường dẫn trong PATH (Bước 2) |
 | Ảnh không tạo được | Kiểm tra internet, thử lại |
-| Token refresh failed HTTP 401 | Chạy `codex login` |
 | Script báo lỗi đỏ | Chụp màn hình và nhờ Claude Code giải thích |
