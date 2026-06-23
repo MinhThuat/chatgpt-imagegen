@@ -29,7 +29,7 @@ echo.
 echo [2/3] Kiem tra token va khoi dong refresh loop...
 python refresh_token.py
 if %errorlevel% neq 0 goto :token_expired
-start "" /min pythonw "%~dp0refresh_loop.pyw"
+powershell -NoProfile -Command "if (-not (Get-Process pythonw -ErrorAction SilentlyContinue | Where-Object { (Get-WmiObject Win32_Process -Filter \"ProcessId=$($_.Id)\").CommandLine -like '*refresh_loop*' })) { Start-Process pythonw -ArgumentList '\"%~dp0refresh_loop.pyw\"' -WindowStyle Hidden }"
 goto :continue
 :token_expired
 echo.
