@@ -43,9 +43,14 @@ exit /b 1
 
 echo.
 echo [3/3] Mo Claude Code...
+for /f "delims=" %%c in ('where claude 2^>nul') do set CLAUDE_EXE=%%c
+if "%CLAUDE_EXE%"=="" (
+    echo LOI: Khong tim thay claude. Chay setup.bat truoc.
+    pause & exit /b 1
+)
 where wt >nul 2>&1
 if %ERRORLEVEL% equ 0 (
-    wt powershell -NoExit -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; Set-Location '%~dp0'; claude ."
+    wt powershell -NoExit -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; Set-Location '%~dp0'; & '%CLAUDE_EXE%' ."
 ) else (
-    start "chatgpt-imagegen" powershell -NoExit -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; Set-Location '%~dp0'; claude ."
+    start "chatgpt-imagegen" powershell -NoExit -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; Set-Location '%~dp0'; & '%CLAUDE_EXE%' ."
 )
