@@ -96,16 +96,21 @@ if (Get-Command claude -ErrorAction SilentlyContinue) {
 }
 
 # ── 5. TASK SCHEDULER ────────────────────────────────────────────
-Step 5 "Tu dong refresh token (30 phut/lan)..."
-$pyExe = (Get-Command python -ErrorAction SilentlyContinue).Source
-$refreshScript = Join-Path $PSScriptRoot "refresh_token.py"
-if ($pyExe -and (Test-Path $refreshScript)) {
-    $action  = New-ScheduledTaskAction -Execute $pyExe -Argument $refreshScript
-    $trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 30) -Once -At (Get-Date)
-    Register-ScheduledTask -TaskName "CodexTokenRefresh" -Action $action -Trigger $trigger -Force | Out-Null
-    OK "Task 'CodexTokenRefresh' da dang ky."
+Step 5 "Tu dong refresh token khi dang nhap..."
+$loopScript = Join-Path $PSScriptRoot "refresh_loop.pyw"
+$startupDir  = [System.Environment]::GetFolderPath("Startup")
+$vbsPath     = Join-Path $startupDir "codex_refresh.vbs"
+
+if (Test-Path $loopScript) {
+    # Tao VBScript trong Startup folder -- chay pythonw an khi login
+    $vbs = @"
+Set oShell = CreateObject("WScript.Shell")
+oShell.Run "pythonw ""$loopScript""", 0, False
+"@
+    Set-Content $vbsPath $vbs -Encoding ASCII
+    OK "Da them vao Startup folder: chay ngam khi dang nhap Windows."
 } else {
-    Write-Host "      Bo qua (Python chua tim thay). Chay lai setup.bat sau khi mo terminal moi." -ForegroundColor DarkYellow
+    Write-Host "      Khong tim thay refresh_loop.pyw. Bo qua." -ForegroundColor DarkYellow
 }
 
 # ── CODEX LOGIN ──────────────────────────────────────────────────

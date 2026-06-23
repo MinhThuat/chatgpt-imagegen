@@ -26,17 +26,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "}"
 
 echo.
-echo [2/3] Kiem tra token...
+echo [2/3] Kiem tra token va khoi dong refresh loop...
 python refresh_token.py
-if %errorlevel% neq 0 (
-    echo.
-    echo TOKEN HET HAN. Vui long chay lenh sau trong terminal:
-    echo.
-    echo     codex login
-    echo.
-    pause
-    exit /b 1
-)
+if %errorlevel% neq 0 goto :token_expired
+start "" /min pythonw "%~dp0refresh_loop.pyw"
+goto :continue
+:token_expired
+echo.
+echo TOKEN HET HAN. Vui long chay lenh sau trong terminal:
+echo.
+echo     codex login
+echo.
+pause
+exit /b 1
+:continue
 
 echo.
 echo [3/3] Mo Claude Code...
