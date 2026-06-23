@@ -2,6 +2,15 @@
 chcp 65001 >nul
 title chatgpt-imagegen
 
+:: ── Neu chua o trong Windows Terminal, thu mo lai o do de hien thi Unicode dung
+if defined WT_SESSION goto :main
+where wt >nul 2>&1
+if %ERRORLEVEL% equ 0 (
+    wt -d "%~dp0" --title "chatgpt-imagegen" cmd /c ""%~f0""
+    exit /b
+)
+
+:main
 echo [1/3] Dang kiem tra cap nhat...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$url = 'https://github.com/MinhThuat/chatgpt-imagegen/archive/refs/heads/main.zip';" ^

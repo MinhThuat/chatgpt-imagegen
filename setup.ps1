@@ -1,5 +1,9 @@
 $ErrorActionPreference = "Stop"
 
+# Dat UTF-8 cho console de hien thi dung trong moi terminal
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding            = [System.Text.Encoding]::UTF8
+
 function Step($n, $msg) { Write-Host "`n[$n/5] $msg" -ForegroundColor Yellow }
 function OK($msg)        { Write-Host "      $msg" -ForegroundColor Green }
 function FAIL($msg)      { Write-Host "      $msg" -ForegroundColor Red }
