@@ -48,9 +48,17 @@ if "%CLAUDE_EXE%"=="" (
     echo LOI: Khong tim thay claude. Chay setup.bat truoc.
     pause & exit /b 1
 )
+
+:: Ghi PS1 tam de tranh van de semicolon voi Windows Terminal
+set TMPPS=%TEMP%\cgi_launch.ps1
+echo [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 > "%TMPPS%"
+echo $OutputEncoding = [System.Text.Encoding]::UTF8 >> "%TMPPS%"
+echo Set-Location '%~dp0' >> "%TMPPS%"
+echo ^& '%CLAUDE_EXE%' . >> "%TMPPS%"
+
 where wt >nul 2>&1
 if %ERRORLEVEL% equ 0 (
-    wt powershell -NoExit -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; Set-Location '%~dp0'; & '%CLAUDE_EXE%' ."
+    wt powershell -NoExit -NoProfile -ExecutionPolicy Bypass -File "%TMPPS%"
 ) else (
-    start "chatgpt-imagegen" powershell -NoExit -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; Set-Location '%~dp0'; & '%CLAUDE_EXE%' ."
+    start "chatgpt-imagegen" powershell -NoExit -NoProfile -ExecutionPolicy Bypass -File "%TMPPS%"
 )
