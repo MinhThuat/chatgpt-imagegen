@@ -52,4 +52,4 @@ exit /b 1
 
 echo.
 echo [3/3] Mo Claude Code...
-claude .
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; claude ."
