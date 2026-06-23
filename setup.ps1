@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding            = [System.Text.Encoding]::UTF8
 
-function Step($n, $msg) { Write-Host "`n[$n/5] $msg" -ForegroundColor Yellow }
+function Step($n, $msg) { Write-Host "`n[$n/6] $msg" -ForegroundColor Yellow }
 function OK($msg)        { Write-Host "      $msg" -ForegroundColor Green }
 function FAIL($msg)      { Write-Host "      $msg" -ForegroundColor Red }
 
@@ -13,10 +13,30 @@ Write-Host @"
  ================================================================
   chatgpt-imagegen - Tu dong cai dat (khong can Admin)
  ================================================================
- Se cai: Python 3.12, Node.js v20 LTS, Codex CLI, Claude Code
+ Se cai: Windows Terminal, Python 3.12, Node.js v20 LTS,
+         Codex CLI, Claude Code
 
 "@
 Read-Host " Nhan Enter de bat dau"
+
+# ── 0. WINDOWS TERMINAL ───────────────────────────────────────────
+Step 0 "Windows Terminal (can thiet de hien thi tieng Viet)..."
+if (Get-Command wt -ErrorAction SilentlyContinue) {
+    OK "Da co san."
+} else {
+    Write-Host "      Chua co. Thu cai qua winget..."
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        & winget install --id Microsoft.WindowsTerminal --accept-package-agreements --accept-source-agreements --silent
+        if (Get-Command wt -ErrorAction SilentlyContinue) {
+            OK "Windows Terminal da cai xong."
+        } else {
+            Write-Host "      Da cai. Mo lai terminal sau khi setup xong de nhan ra." -ForegroundColor DarkYellow
+        }
+    } else {
+        Write-Host "      winget khong co. Vao Microsoft Store tai 'Windows Terminal' (mien phi)." -ForegroundColor DarkYellow
+        Write-Host "      Link: https://aka.ms/terminal" -ForegroundColor DarkYellow
+    }
+}
 
 # ── 1. PYTHON ─────────────────────────────────────────────────────
 Step 1 "Python..."
@@ -59,7 +79,6 @@ if ($node) {
     Write-Host "      Giai nen..."
     if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
     Expand-Archive $zip $tmp -Force
-    # Fix double-nesting: lay thu muc con dau tien ben trong
     $inner = (Get-ChildItem $tmp -Directory | Select-Object -First 1).FullName
     $dst = "$env:LOCALAPPDATA\nodejs"
     if (Test-Path $dst) { Remove-Item $dst -Recurse -Force }
@@ -82,7 +101,6 @@ if (Get-Command codex -ErrorAction SilentlyContinue) {
     Write-Host "      Cai @openai/codex..."
     & npm install -g @openai/codex
     if ($LASTEXITCODE -ne 0) { FAIL "LOI: Khong cai duoc Codex."; Read-Host; exit 1 }
-    # Refresh npm global bin path neu can
     $npmBin = & npm bin -g 2>$null
     if ($npmBin -and ($env:PATH -notlike "*$npmBin*")) { $env:PATH = "$npmBin;" + $env:PATH }
     OK "Codex da cai xong."
@@ -99,20 +117,19 @@ if (Get-Command claude -ErrorAction SilentlyContinue) {
     OK "Claude Code da cai xong."
 }
 
-# ── 5. TASK SCHEDULER ────────────────────────────────────────────
+# ── 5. STARTUP REFRESH LOOP ──────────────────────────────────────
 Step 5 "Tu dong refresh token khi dang nhap..."
 $loopScript = Join-Path $PSScriptRoot "refresh_loop.pyw"
 $startupDir  = [System.Environment]::GetFolderPath("Startup")
 $vbsPath     = Join-Path $startupDir "codex_refresh.vbs"
 
 if (Test-Path $loopScript) {
-    # Tao VBScript trong Startup folder -- chay pythonw an khi login
     $vbs = @"
 Set oShell = CreateObject("WScript.Shell")
 oShell.Run "pythonw ""$loopScript""", 0, False
 "@
     Set-Content $vbsPath $vbs -Encoding ASCII
-    OK "Da them vao Startup folder: chay ngam khi dang nhap Windows."
+    OK "Da them vao Startup folder."
 } else {
     Write-Host "      Khong tim thay refresh_loop.pyw. Bo qua." -ForegroundColor DarkYellow
 }
