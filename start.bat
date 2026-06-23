@@ -42,5 +42,10 @@ exit /b 1
 :continue
 
 echo.
-echo [3/3] Mo Claude Code trong PowerShell window...
-start "chatgpt-imagegen" powershell -NoExit -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; Set-Location '%~dp0'; claude ."
+echo [3/3] Mo Claude Code...
+where wt >nul 2>&1
+if %ERRORLEVEL% equ 0 (
+    wt powershell -NoExit -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; Set-Location '%~dp0'; claude ."
+) else (
+    start "chatgpt-imagegen" powershell -NoExit -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; Set-Location '%~dp0'; claude ."
+)
